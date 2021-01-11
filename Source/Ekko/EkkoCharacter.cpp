@@ -8,6 +8,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "TimerManager.h"
+
 
 //////////////////////////////////////////////////////////////////////////
 // AEkkoCharacter
@@ -47,6 +49,40 @@ AEkkoCharacter::AEkkoCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
 
+
+void AEkkoCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	Health = MaxHealth;
+
+	GetWorldTimerManager().SetTimer(Ekko_R_Record_TimeHandler, this, &AEkkoCharacter::Ekko_R_Record, RecordInterval, true);
+	
+}
+
+
+void AEkkoCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	
+	if(bIsEkkoRActivated)
+	{
+		if(AccumulateTime >= RecordInterval)
+		{
+			Ekko_R_Helper();
+			AccumulateTime = 0.0f;
+		}
+
+		AccumulateTime += DeltaSeconds;
+	}
+}
+
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -57,6 +93,10 @@ void AEkkoCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAction("Ekko_R", IE_Pressed, this, &AEkkoCharacter::Ekko_R_Activated);
+	PlayerInputComponent->BindAction("Ekko_R", IE_Released, this, &AEkkoCharacter::Ekko_R_Cancelled);
+
+	
 	PlayerInputComponent->BindAxis("MoveForward", this, &AEkkoCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AEkkoCharacter::MoveRight);
 
@@ -67,7 +107,8 @@ void AEkkoCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAxis("TurnRate", this, &AEkkoCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AEkkoCharacter::LookUpAtRate);
-
+	
+	
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AEkkoCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &AEkkoCharacter::TouchStopped);
@@ -138,3 +179,90 @@ void AEkkoCharacter::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
+
+
+void AEkkoCharacter::Ekko_R()
+{
+	//return;
+	GetWorldTimerManager().SetTimer(Ekko_R_Retrieve_TimeHandler,this, &AEkkoCharacter::Ekko_R_Helper, RecordInterval);
+
+}
+
+
+void AEkkoCharacter::Ekko_R_Helper()
+{
+	if (Ekko_R_CachedStatus.Num() <= 0) { UE_LOG(LogTemp, Warning, TEXT("Cached data is empty.")); return; }
+	
+	SetActorLocationAndRotation(Ekko_R_CachedStatus.Top().Get<1>(), Ekko_R_CachedStatus.Top().Get<2>());
+
+
+	//UE_LOG(LogTemp, Warning, TEXT("Data: Health: %f, Location: (%f, %f, %f), Rotation: (%f, %f, %f)"),
+	//	Ekko_R_CachedStatus.Top().Get<0>(),
+	//	Ekko_R_CachedStatus.Top().Get<1>().X,
+	//	Ekko_R_CachedStatus.Top().Get<1>().Y,
+	//	Ekko_R_CachedStatus.Top().Get<1>().Z,
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().X,
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().Y,
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().Z
+	//);
+
+	
+
+	Ekko_R_CachedStatus.RemoveAt(Ekko_R_CachedStatus.Num()-1);
+
+
+	
+}
+
+
+
+
+void AEkkoCharacter::Ekko_R_Record()
+{
+
+	if (bIsEkkoRActivated) { return; }
+	
+	
+	if(Ekko_R_CachedStatus.Num() >= CachedDataSize)
+	{
+		Ekko_R_CachedStatus.RemoveAt(0, 1,true);
+	}
+
+	
+	//UE_LOG(LogTemp, Warning, TEXT("Recorded once."));
+	TTuple<float, FVector, FRotator> Temp_Data(Health, GetActorLocation(), GetActorRotation());
+
+	Ekko_R_CachedStatus.Add(Temp_Data);
+
+	//UE_LOG(LogTemp, Warning, TEXT("Data: Health: %f, Location: (%f, %f, %f), Rotation: (%f, %f, %f)"), 
+	//	Ekko_R_CachedStatus.Top().Get<0>(), 
+	//	Ekko_R_CachedStatus.Top().Get<1>().X, 
+	//	Ekko_R_CachedStatus.Top().Get<1>().Y, 
+	//	Ekko_R_CachedStatus.Top().Get<1>().Z, 
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().X, 
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().Y, 
+	//	Ekko_R_CachedStatus.Top().Get<2>().Vector().Z
+	//);
+
+}
+
+
+void AEkkoCharacter::Ekko_R_Activated()
+{
+	bIsEkkoRActivated = true;
+
+	//UE_LOG(LogTemp, Warning, TEXT("R Pressed, Ekko R Status: %s"), bIsEkkoRActivated ? *FString(TEXT("True")) : *FString(TEXT("False")));
+	
+}
+
+
+void AEkkoCharacter::Ekko_R_Cancelled()
+{
+	bIsEkkoRActivated = false;
+
+	//UE_LOG(LogTemp, Warning, TEXT("R Released, Ekko R Status: %s"), bIsEkkoRActivated ? *FString(TEXT("True")) : *FString(TEXT("False")));
+}
+
+
+
+

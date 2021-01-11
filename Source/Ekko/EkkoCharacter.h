@@ -21,6 +21,8 @@ class AEkkoCharacter : public ACharacter
 public:
 	AEkkoCharacter();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -28,6 +30,16 @@ public:
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
+
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Status")
+		float MaxHealth = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ekko_R Parameters")
+		float RecordInterval = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Ekko_R Parameters")
+		int32 CachedDataSize = 30;
 
 protected:
 
@@ -59,6 +71,9 @@ protected:
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
 protected:
+
+	virtual void BeginPlay() override;
+	
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
@@ -72,7 +87,31 @@ public:
 
 private:
 
-	float Health = 100.f;
+	UPROPERTY(VisibleAnywhere, Category = "Character Status")
+		float Health = 0.f;
+
+
 	
+	UFUNCTION()
+		void Ekko_R();
+
+
+
+	void Ekko_R_Record();
+
+	void Ekko_R_Activated();
+
+	void Ekko_R_Cancelled();
+
+	void Ekko_R_Helper();
+
+	FTimerHandle Ekko_R_Record_TimeHandler;
+	FTimerHandle Ekko_R_Retrieve_TimeHandler;
+
+	
+	TArray<TTuple<float, FVector, FRotator>> Ekko_R_CachedStatus;
+	bool bIsEkkoRActivated = false;
+	float AccumulateTime = 0.0f;
+
 };
 
